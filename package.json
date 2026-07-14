@@ -1,0 +1,14 @@
+{
+  "name": "task-api",
+  "version": "1.0.0",
+  "description": "Simple task API for the FlyRank backend assignment",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "swagger-ui-express": "^5.0.1"
+  }
+}
