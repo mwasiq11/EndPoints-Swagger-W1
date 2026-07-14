@@ -1,6 +1,6 @@
 # Task API
 
-I built this for the FlyRank Week 2 backend assignment. It is a small Express app with in-memory tasks, so restarting the server clears the data.
+I built this endpoints and tested with Swagger.It is a small Express app with in-memory tasks, so restarting the server clears the data.
 
 ## How to run
 
