@@ -1,4 +1,4 @@
-# Task API
+# Endpoints-API
 
 I built this endpoints and tested with Swagger.It is a small Express app with in-memory tasks, so restarting the server clears the data.
 
