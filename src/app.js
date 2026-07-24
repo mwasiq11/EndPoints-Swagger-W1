@@ -1,26 +1,17 @@
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
 import openApiDocument from '../openapi.json' with { type: 'json' };
+import {
+  createTask,
+  deleteTask,
+  getAllTasks,
+  getTaskById,
+  updateTask
+} from './db.js';
 
 const app = express();
 
 app.use(express.json());
-
-const initialTasks = [
-  { id: 1, title: 'Buy milk', done: false },
-  { id: 2, title: 'Finish homework', done: true },
-  { id: 3, title: 'Walk the dog', done: false }
-];
-
-let tasks = initialTasks.map((task) => ({ ...task }));
-
-function nextTaskId() {
-  return tasks.length === 0 ? 1 : Math.max(...tasks.map((task) => task.id)) + 1;
-}
-
-function findTaskById(id) {
-  return tasks.find((task) => task.id === id);
-}
 
 function parseTaskId(value) {
   const trimmedValue = String(value).trim();
@@ -40,19 +31,11 @@ function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function normalizeTask(task) {
-  return {
-    id: task.id,
-    title: task.title,
-    done: task.done
-  };
-}
-
 app.get('/', (request, response) => {
   response.json({
     name: 'Task API',
     version: '1.0',
-    endpoints: ['/tasks']
+    endpoints: ['/health', '/tasks', '/tasks/:id', '/docs', '/openapi.json']
   });
 });
 
@@ -60,23 +43,23 @@ app.get('/health', (request, response) => {
   response.json({ status: 'ok' });
 });
 
-app.get('/tasks', (request, response) => {
-  response.json(tasks.map(normalizeTask));
+app.get('/tasks', async (request, response) => {
+  response.json(await getAllTasks());
 });
 
-app.get('/tasks/:id', (request, response) => {
+app.get('/tasks/:id', async (request, response) => {
   const id = parseTaskId(request.params.id);
-  const task = id === null ? undefined : findTaskById(id);
+  const task = id === null ? undefined : await getTaskById(id);
 
   if (!task) {
     response.status(404).json({ error: `Task ${request.params.id} not found` });
     return;
   }
 
-  response.json(normalizeTask(task));
+  response.json(task);
 });
 
-app.post('/tasks', (request, response) => {
+app.post('/tasks', async (request, response) => {
   const { body } = request;
 
   if (!isPlainObject(body) || !isNonEmptyString(body.title)) {
@@ -84,21 +67,15 @@ app.post('/tasks', (request, response) => {
     return;
   }
 
-  const task = {
-    id: nextTaskId(),
-    title: body.title.trim(),
-    done: false
-  };
-
-  tasks.push(task);
-  response.status(201).json(normalizeTask(task));
+  const task = await createTask(body.title.trim());
+  response.status(201).json(task);
 });
 
-app.put('/tasks/:id', (request, response) => {
+app.put('/tasks/:id', async (request, response) => {
   const id = parseTaskId(request.params.id);
-  const task = id === null ? undefined : findTaskById(id);
+  const existingTask = id === null ? undefined : await getTaskById(id);
 
-  if (!task) {
+  if (!existingTask) {
     response.status(404).json({ error: `Task ${request.params.id} not found` });
     return;
   }
@@ -110,13 +87,16 @@ app.put('/tasks/:id', (request, response) => {
     return;
   }
 
+  let title = existingTask.title;
+  let done = existingTask.done;
+
   if (body.title !== undefined) {
     if (!isNonEmptyString(body.title)) {
       response.status(400).json({ error: 'title must not be empty' });
       return;
     }
 
-    task.title = body.title.trim();
+    title = body.title.trim();
   }
 
   if (body.done !== undefined) {
@@ -125,22 +105,21 @@ app.put('/tasks/:id', (request, response) => {
       return;
     }
 
-    task.done = body.done;
+    done = body.done;
   }
 
-  response.json(normalizeTask(task));
+  const task = await updateTask(id, title, done);
+  response.json(task);
 });
 
-app.delete('/tasks/:id', (request, response) => {
+app.delete('/tasks/:id', async (request, response) => {
   const id = parseTaskId(request.params.id);
-  const index = id === null ? -1 : tasks.findIndex((task) => task.id === id);
 
-  if (index === -1) {
+  if (id === null || !(await deleteTask(id))) {
     response.status(404).json({ error: `Task ${request.params.id} not found` });
     return;
   }
 
-  tasks.splice(index, 1);
   response.status(204).send();
 });
 

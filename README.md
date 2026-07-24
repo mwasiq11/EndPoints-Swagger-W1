@@ -1,17 +1,45 @@
 # Task API
 
-I built this for the FlyRank Week 2 backend assignment. It is a small Express app with in-memory tasks, so restarting the server clears the data.
+## Project Overview
 
-## How to run
+This project is a CRUD task API built with Node.js, Express, and SQLite. It preserves the same endpoints and response formats as the original Week 2 assignment while moving storage from an in-memory array to a persistent SQLite database.
+
+## Why SQLite
+
+SQLite is a lightweight, single-file database that requires no separate server setup. It is easy to use for small applications and the database file persists across server restarts.
+
+## Installation
 
 ```bash
 npm install
+npm install better-sqlite3
+```
+
+## Run
+
+```bash
 npm start
 ```
 
 The app runs at `http://localhost:3000`.
 
-## What is in it
+## Database
+
+The app automatically creates a file named `tasks.db` on startup if it does not already exist. It also creates the `tasks` table automatically and seeds it with three initial tasks the first time the database is created.
+
+## Persistence
+
+Tasks are stored in the SQLite database file, so they survive server restarts and remain available after the process is restarted.
+
+## Project Structure
+
+- `src/app.js` — Express route handlers and validation
+- `src/db.js` — SQLite initialization, seeding, and query helpers
+- `src/server.js` — server startup and shutdown handling
+- `openapi.json` — Swagger/OpenAPI document
+- `tasks.db` — SQLite database file created automatically
+
+## Endpoints
 
 | Method | Path | What it does |
 | --- | --- | --- |
@@ -25,35 +53,26 @@ The app runs at `http://localhost:3000`.
 | GET | /docs | Swagger UI |
 | GET | /openapi.json | OpenAPI file |
 
-## Status codes I used
+## Example SQL
+
+```sql
+SELECT * FROM tasks;
+```
+
+This returns all tasks stored in the SQLite database.
+
+## DB Browser Screenshot
+
+A screenshot placeholder for assignment submission can be added here once the database is viewed in DB Browser for SQLite.
+
+## Swagger Screenshot Placeholder
+
+A screenshot placeholder for the Swagger UI can be added here for assignment submission.
+
+## Status codes used
 
 - `200` for reads and updates
 - `201` for creating a task
 - `204` for delete
 - `400` for bad input
 - `404` when the task id is not found
-
-## Example response
-
-```bash
-curl -i http://localhost:3000/tasks/1
-```
-
-```text
-HTTP/1.1 200 OK
-Content-Type: application/json; charset=utf-8
-
-{"id":1,"title":"Buy milk","done":false}
-```
-
-## Screenshots
-
-I kept the screenshots under docs/screenshots so they are easy to find.
-
-![Swagger UI screenshot](docs/screenshots/swagger-ui.png)
-
-![Tasks JSON screenshot](docs/screenshots/tasks-json.png)
-
-![Task detail JSON screenshot](docs/screenshots/task-detail-json.png)
-
-![404 JSON screenshot](docs/screenshots/task-404-json.png)
