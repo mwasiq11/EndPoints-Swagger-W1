@@ -1,6 +1,10 @@
-# Task API
+# Endpoints-API
+
 
 ## Project Overview
+=======
+I built this endpoints and tested with Swagger.It is a small Express app with in-memory tasks, so restarting the server clears the data.
+
 
 This project is a CRUD task API built with Node.js, Express, and SQLite. It preserves the same endpoints and response formats as the original Week 2 assignment while moving storage from an in-memory array to a persistent SQLite database.
 
