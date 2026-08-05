@@ -1,228 +1,165 @@
-# Task API – Week 3 (PostgreSQL & Docker Integration)
+# FlyRank Backend Assignment - Auth, Public, and Protected APIs
 
 ## Project Overview
 
-This project is the Week 3 continuation of the Week 2 CRUD API. It is built with Node.js and Express, and the storage layer has been migrated from an embedded SQLite database to PostgreSQL using connection pooling so the API persists data across container and server restarts.
+This repository extends the existing FlyRank backend project with Supabase authentication, public and protected routes, Swagger bearer auth, and reusable middleware while preserving the earlier task API used in previous weeks.
 
-The API behavior remains identical to the Week 2 assignment, but the task data is now stored in a production-ready PostgreSQL database orchestrated via Docker and Docker Compose using multi-stage Alpine builds.
+The application uses Node.js, Express, PostgreSQL, Supabase Auth, dotenv, and swagger-ui-express.
 
-## Features
+## Installation
 
-- Express REST API
-- PostgreSQL database integration with connection pooling
-- Docker & Docker Compose containerization
-- Multi-stage Alpine build architecture
-- Persistent storage using Docker named volume (`taskdata`)
-- Environment variable configuration (`.env`)
-- Automatic table creation on startup
-- Automatic non-duplicating seed data initialization
-- Full CRUD operations
-- Input validation & proper HTTP status codes
-- Parameterized SQL queries (zero SQL string concatenation)
-- Swagger/OpenAPI documentation
+```bash
+npm install
+```
 
-## Technologies Used
+If you are starting from a clean environment, copy the example environment file first:
 
-- Node.js & Express.js
-- PostgreSQL & official `pg` package (node-postgres)
-- Docker & Docker Compose
-- Swagger UI / OpenAPI
-
-## Why PostgreSQL & Docker?
-
-PostgreSQL and Docker were chosen because they provide:
-
-- robust, production-grade relational data handling
-- efficient client connection pooling via `pg.Pool`
-- containerized isolation ensuring reproducible builds across machines
-- lightweight image footprint using Alpine Linux multi-stage builds
-- zero-config multi-container startup using Docker Compose
-- seamless persistence using Docker volumes
+```bash
+copy .env.example .env
+```
 
 ## Environment Variables
 
-The database connection string is configured via environment variables to avoid hardcoded credentials.
-
-Create a `.env` file in the root directory (copied from `.env.example`):
+Create a root `.env` file with the following values:
 
 ```env
-DATABASE_URL=postgres://postgres:dev@localhost:5432/tasks
+DATABASE_URL=postgres://username:password@localhost:5432/tasks
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_KEY=your_supabase_anon_key
+PORT=3000
 ```
 
-Inside Docker Compose, the API service automatically connects via the internal network hostname using:
-`postgres://postgres:dev@db:5432/tasks`
+Security notes:
 
-## Running the Project with Docker Compose
+- Keep `.env` uncommitted.
+- Use the Supabase anon key only.
+- Do not log passwords or tokens.
 
-The easiest and recommended way to start up the full application suite (API + PostgreSQL Database) is via Docker Compose:
+## Run Commands
+
+```bash
+npm start
+```
+
+If you use Docker:
 
 ```bash
 docker compose up --build
 ```
 
-To run in detached (background) mode:
+## API Summary
 
-```bash
-docker compose up -d --build
-```
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| POST | /auth/signup | No | Create a new Supabase user |
+| POST | /auth/login | No | Authenticate and return JWT tokens |
+| POST | /auth/logout | Yes | Sign the current user out |
+| GET | /public/info | No | Public informational message |
+| GET | /protected/profile | Yes | Return the authenticated user's profile |
+| GET | /protected/dashboard | Yes | Return a protected dashboard response |
+| GET | /tasks | No | Existing task list endpoint |
+| GET | /tasks/:id | No | Existing single task endpoint |
+| POST | /tasks | No | Existing create task endpoint |
+| PUT | /tasks/:id | No | Existing update task endpoint |
+| DELETE | /tasks/:id | No | Existing delete task endpoint |
+| GET | /docs | No | Swagger UI |
+| GET | /openapi.json | No | Raw OpenAPI document |
 
-The services will initialize as follows:
-- **API Service**: Runs on `http://localhost:3000` (port `3000` exposed)
-- **Database Service**: PostgreSQL runs on port `5432` exposed locally and internally as `db:5432`
-- **Swagger Documentation**: Available at `http://localhost:3000/docs`
+## Authentication Flow
 
-## Local Installation (Without Docker)
+1. Sign up with `POST /auth/signup`.
+2. Log in with `POST /auth/login`.
+3. Copy the returned `access_token`.
+4. Click **Authorize** in Swagger and paste the token as a Bearer token.
+5. Call `GET /protected/profile`, `GET /protected/dashboard`, or `POST /auth/logout`.
+6. After logout, the same token should be rejected on protected routes.
 
-If you have a local PostgreSQL instance running on port `5432`:
+## Swagger
 
-```bash
-git clone <repository-url>
-cd <project-folder>
-npm install
-npm start
-```
+Swagger UI is available at `/docs` and exposes bearer authentication for protected routes.
 
-## Database & Persistence
+![Swagger UI screenshot placeholder](docs/screenshots/swagger-ui.png)
 
-This project uses PostgreSQL. When the application starts, it automatically connects to the PostgreSQL database with built-in retry logic (handling container startup order in Docker Compose).
-
-No manual database setup is required. The application automatically:
-- connects to PostgreSQL
-- creates the `tasks` table if it does not already exist
-- inserts three example tasks only when the table is completely empty
-
-### Docker Volume Persistence
-
-Data remains persistent across container restarts or teardowns because PostgreSQL data is mounted to a Docker named volume called `taskdata` (`/var/lib/postgresql/data`). Restarting the Docker containers does not duplicate the seed data or wipe created tasks.
-
-## API Endpoints
-
-| Method | Path | Description |
-| --- | --- | --- |
-| GET | / | API information |
-| GET | /health | Health check |
-| GET | /tasks | Get all tasks |
-| GET | /tasks/:id | Get one task |
-| POST | /tasks | Create a task |
-| PUT | /tasks/:id | Update a task |
-| DELETE | /tasks/:id | Delete a task |
-| GET | /docs | Swagger UI |
-| GET | /openapi.json | OpenAPI documentation |
-
-## Request and Response Examples
-
-### GET /tasks
-
-```json
-[
-  {
-    "id": 1,
-    "title": "Learn Express",
-    "done": false
-  }
-]
-```
-
-### POST /tasks
-
-```json
-{
-  "title": "Finish assignment"
-}
-```
-
-Response:
-
-```json
-{
-  "id": 4,
-  "title": "Finish assignment",
-  "done": false
-}
-```
-
-### PUT /tasks/:id
-
-```json
-{
-  "done": true
-}
-```
-
-### DELETE /tasks/:id
-
-Returns no response body and responds with HTTP 204.
-
-## Status Codes
-
-| Status Code | Meaning |
-| --- | --- |
-| 200 OK | Request succeeded |
-| 201 Created | Task successfully created |
-| 204 No Content | Task successfully deleted |
-| 400 Bad Request | Invalid input or request body |
-| 404 Not Found | Task not found |
-
-## Parameterized SQL Examples
-
-All database queries strictly utilize PostgreSQL parameter placeholders (`$1`, `$2`, `$3`) to guarantee security against SQL injection:
-
-```sql
-SELECT * FROM tasks;
-
-SELECT * FROM tasks WHERE id = $1;
-
-INSERT INTO tasks(title, done)
-VALUES($1, $2)
-RETURNING *;
-
-UPDATE tasks
-SET title = $1,
-    done = $2
-WHERE id = $3
-RETURNING *;
-
-DELETE FROM tasks
-WHERE id = $1;
-```
-
-## Database Client Screenshot
-
-![PostgreSQL DB Client view of tasks table](docs/screenshots/postgres-tasks.png)
-
-## Swagger Screenshot
-
-![Swagger UI documentation](docs/screenshots/swagger-ui.png)
-
-## Project Structure
+## Folder Structure
 
 ```text
 project/
 ├── src/
-│   ├── app.js      (Unmodified route definitions & business logic)
-│   ├── db.js       (Migrated PostgreSQL pg pool repository layer)
-│   └── server.js   (Unmodified server launcher & graceful shutdown)
-├── Dockerfile      (Multi-stage Alpine build configuration)
-├── compose.yaml    (Docker Compose orchestration with volume persistence)
-├── .env            (Local environment credentials - gitignored)
-├── .env.example    (Template environment configuration)
-├── openapi.json    (Unmodified OpenAPI specification)
-├── package.json    (Updated dependencies: pg installed, sqlite removed)
-└── README.md
+│   ├── config/
+│   ├── controllers/
+│   ├── middleware/
+│   ├── routes/
+│   ├── services/
+│   ├── swagger/
+│   ├── utils/
+│   ├── app.js
+│   ├── db.js
+│   └── server.js
+├── docs/
+│   └── screenshots/
+├── Dockerfile
+├── compose.yaml
+├── openapi.json
+├── package.json
+├── README.md
+├── .env
+└── .env.example
 ```
 
-## Git Ignore & Environment Configuration
+## Testing Instructions
 
-The local `.env` file containing actual connection URLs is added to `.gitignore` so credentials are never committed. An `.env.example` file is tracked in Git to guide developers on required environment variables.
+Use these manual checks after providing valid Supabase credentials:
 
-## Assignment Requirements Covered
+### Signup
 
-This project strictly satisfies the Week 3 assignment requirements by featuring:
-- Migration from SQLite to PostgreSQL storage layer
-- Official `pg` connection pool implementation
-- Complete Docker support (`Dockerfile` and `compose.yaml` with Alpine multi-stage builds)
-- Persistent Docker named volume (`taskdata`)
-- Environment variable connection configuration (`DATABASE_URL`)
-- Automatic table creation and one-time non-duplicating seed initialization
-- Identical API behavior, routes, status codes, validation, and Swagger docs as Week 2
-- 100% Parameterized SQL queries with zero string concatenation
+- Valid email and password returns `201`.
+- Missing email returns `400`.
+- Missing password returns `400`.
+- Duplicate email returns an error response.
+
+### Login
+
+- Valid credentials return `access_token`, `refresh_token`, and `user`.
+- Wrong password returns `401`.
+- Unknown email returns `401`.
+- Empty fields return `400`.
+
+### Public Route
+
+- `GET /public/info` works without authentication.
+
+### Protected Routes
+
+- Missing token returns `401`.
+- Malformed token returns `401`.
+- Tampered or expired token returns `401`.
+- Valid token returns profile and dashboard data.
+
+### Logout
+
+- Valid token returns `204`.
+- Invalid or missing token returns `401`.
+
+### Swagger
+
+- Bearer auth lock icon is visible.
+- Authorize works with a JWT.
+- Protected endpoints can be called from Swagger after authorization.
+
+## Git Commit Suggestions
+
+- `feat(auth): add Supabase signup, login, and logout`
+- `feat(routes): add public and protected endpoints with middleware`
+- `docs: refresh README and OpenAPI specification`
+- `chore: add environment example and Supabase dependencies`
+
+## Security Notes
+
+- `.env` is ignored by Git.
+- `.env.example` is committed for setup only.
+- No password or token should be returned outside the required auth responses.
+- No service role key is used in this implementation.
+
+## Legacy Task API
+
+The existing task endpoints remain available to preserve earlier assignment behavior and container workflow.

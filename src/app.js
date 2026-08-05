@@ -1,6 +1,6 @@
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
-import openApiDocument from '../openapi.json' with { type: 'json' };
+import openApiDocument from './swagger/openapi.js';
 import {
   createTask,
   deleteTask,
@@ -8,6 +8,10 @@ import {
   getTaskById,
   updateTask
 } from './db.js';
+import { authRouter } from './routes/authRoutes.js';
+import { protectedRouter } from './routes/protectedRoutes.js';
+import { publicRouter } from './routes/publicRoutes.js';
+import { sendError } from './utils/response.js';
 
 const app = express();
 
@@ -33,15 +37,31 @@ function isPlainObject(value) {
 
 app.get('/', (request, response) => {
   response.json({
-    name: 'Task API',
-    version: '1.0',
-    endpoints: ['/health', '/tasks', '/tasks/:id', '/docs', '/openapi.json']
+    name: 'FlyRank Backend Assignment API',
+    version: '1.0.0',
+    endpoints: [
+      '/health',
+      '/auth/signup',
+      '/auth/login',
+      '/auth/logout',
+      '/public/info',
+      '/protected/profile',
+      '/protected/dashboard',
+      '/tasks',
+      '/tasks/:id',
+      '/docs',
+      '/openapi.json'
+    ]
   });
 });
 
 app.get('/health', (request, response) => {
   response.json({ status: 'ok' });
 });
+
+app.use('/auth', authRouter);
+app.use('/public', publicRouter);
+app.use('/protected', protectedRouter);
 
 app.get('/tasks', async (request, response) => {
   response.json(await getAllTasks());
@@ -128,13 +148,31 @@ app.get('/openapi.json', (request, response) => {
   response.json(openApiDocument);
 });
 
+app.use((request, response) => {
+  sendError(response, 404, 'Route not found');
+});
+
 app.use((error, request, response, next) => {
   if (error instanceof SyntaxError && 'body' in error) {
-    response.status(400).json({ error: 'invalid JSON body' });
+    sendError(response, 400, 'invalid JSON body');
     return;
   }
 
-  next(error);
+  const statusCode = Number.isInteger(error.statusCode)
+    ? error.statusCode
+    : Number.isInteger(error.status)
+      ? error.status
+      : 500;
+
+  if (statusCode >= 500) {
+    console.error(error);
+  }
+
+  sendError(
+    response,
+    statusCode,
+    statusCode >= 500 ? 'Internal Server Error' : error.message || 'Request failed'
+  );
 });
 
 export { app };
