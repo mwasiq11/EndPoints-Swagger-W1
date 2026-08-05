@@ -1,4 +1,4 @@
-# FlyRank Backend Assignment - Auth, Public, and Protected APIs
+# FlyRank Backend W4 - Auth, Public, and Protected APIs
 
 ## Project Overview
 
